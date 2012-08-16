@@ -44,14 +44,14 @@
  * @param edgeCount
  */
 __kernel  void dijkstra_sssp1(
-	__global int *vertexArray,
-	__global int *edgeArray,
-	__global float *weightArray,
-	__global int *maskArray,
-	__global float *costArray,
-	__global float *updatingCostArray,
-	int vertexCount,
-	int edgeCount
+	__global uint *vertexArray,
+	__global uint *edgeArray,
+	__global uint *weightArray,
+	__global uint *maskArray,
+	__global uint *costArray,
+	__global uint *updatingCostArray,
+	const uint vertexCount,
+	const uint edgeCount
 ) {
     // access thread id
     int tid = get_global_id(0);
@@ -100,13 +100,9 @@ __kernel  void dijkstra_sssp1(
  * @param vertexCount
  */
 __kernel  void dijkstra_sssp2(
-	__global int *vertexArray,
-	__global int *edgeArray,
-	__global float *weightArray,
-	__global int *maskArray,
-	__global float *costArray,
-	__global float *updatingCostArray,
-	int vertexCount
+	__global uint *maskArray,
+	__global uint *costArray,
+	__global uint *updatingCostArray
 ) {
     // access thread id
     int tid = get_global_id(0);
@@ -119,7 +115,6 @@ __kernel  void dijkstra_sssp2(
     updatingCostArray[tid] = costArray[tid];
 }
 
-
 /**
  * Implementation of Dijkstra's Single-Source Shortest Path (SSSP) algorithm on
  * the GPU. 
@@ -131,9 +126,9 @@ __kernel  void dijkstra_sssp2(
  * <ul>
  *  <li>set <code>maskArray[]</code> to <code>0</code></li>
  *  <li>set <code>maskArray[sourceVertex]</code> to <code>1</code></li>
- *  <li>set <code>costArray[]</code> to <code>INT_MAXVALUE</code></li>
+ *  <li>set <code>costArray[]</code> to <code>INT_MAX</code></li>
  *  <li>set <code>costArray[sourceVertex]</code> to <code>0</code></li>
- *  <li>set <code>updatingCostArray[]</code> to <code>INT_MAXVALUE</code></li>
+ *  <li>set <code>updatingCostArray[]</code> to <code>INT_MAX</code></li>
  *  <li>set <code>updatingCostArray[sourceVertex]</code> to <code>1</code></li>
  * </ul>
  *
@@ -146,22 +141,22 @@ __kernel  void dijkstra_sssp2(
  * @param vertexCount
  */
 __kernel void dijkstra_initialize(
-	__global int *maskArray,
-	__global float *costArray,
-	__global float *updatingCostArray,
-	int sourceVertex,
-	int vertexCount
+	__global uint *maskArray,
+	__global uint *costArray,
+	__global uint *updatingCostArray,
+	const uint sourceVertex,
+	const uint vertexCount
 ) {
     // access thread id
     int tid = get_global_id(0);
 
 	if (sourceVertex == tid) {
 	    maskArray[tid] = 1;
-	    costArray[tid] = 0.0;
-	    updatingCostArray[tid] = 0.0;
+	    costArray[tid] = 0;
+	    updatingCostArray[tid] = 0;
 	} else {
 	    maskArray[tid] = 0;
-	    costArray[tid] = FLT_MAX;
-	    updatingCostArray[tid] = FLT_MAX;
+	    costArray[tid] = INT_MAX;
+	    updatingCostArray[tid] = INT_MAX;
 	}
 }
