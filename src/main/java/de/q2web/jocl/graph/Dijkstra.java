@@ -15,8 +15,6 @@ import static org.jocl.CL.clReleaseMemObject;
 import static org.jocl.CL.clReleaseProgram;
 import static org.jocl.CL.clSetKernelArg;
 
-import java.util.Arrays;
-
 import org.jocl.Pointer;
 import org.jocl.Sizeof;
 import org.jocl.cl_command_queue;
@@ -35,7 +33,7 @@ import de.q2web.jocl.util.Resources;
 public class Dijkstra {
 
 	/** Source code of the kernels. */
-	private static final String SOURCE = Resources
+	protected static final String SOURCE = Resources
 			.convertStreamToString(Dijkstra.class
 					.getResourceAsStream("dijkstraKernels.cl"));
 
@@ -49,7 +47,7 @@ public class Dijkstra {
 	private static final String KERNEL_SSSP_1 = "dijkstra_sssp1";
 
 	/** The Constant KERNEL_SSSP_2. */
-	private static final String KERNEL_SSSP_2 = "dijkstra_sssp1";
+	private static final String KERNEL_SSSP_2 = "dijkstra_sssp2";
 
 	/** The graph. */
 	private final Graph graph;
@@ -73,9 +71,10 @@ public class Dijkstra {
 	 *            the queue
 	 * @param sourceVertexId
 	 *            the source vertex id
+	 * @return
 	 */
-	public void run(final cl_context context, final cl_command_queue queue,
-			final int sourceVertexId) {
+	public int run(final cl_context context, final cl_command_queue queue,
+			final int sourceVertexId, final int targetVertexId) {
 		// initialize arrays
 		cl_program program = null;
 		cl_kernel intializationKernel = null;
@@ -90,34 +89,34 @@ public class Dijkstra {
 
 			final int vertexCount = graph.getVertexArray().length;
 			final int edgeCount = graph.getEdgeArray().length;
+
 			final int[] vertexArray = graph.getVertexArray();
 			final int[] edgeArray = graph.getEdgeArray();
 			final int[] weightArray = graph.getWeightArray();
-			final int[] maskArray = new int[vertexCount];
-			final int[] costArray = new int[edgeCount];
 
 			final Pointer vertexArrayPointer = Pointer.to(vertexArray);
 			final Pointer edgeArrayPointer = Pointer.to(edgeArray);
 			final Pointer weightArrayPointer = Pointer.to(weightArray);
-			final Pointer maskArrayPointer = Pointer.to(maskArray);
-			final Pointer costArrayPointer = Pointer.to(costArray);
 
 			memObject = new cl_mem[6];
 			memObject[0] = clCreateBuffer(context, CL_MEM_READ_ONLY
-					| CL_MEM_COPY_HOST_PTR, Sizeof.cl_int * vertexArray.length,
-					vertexArrayPointer, null);
+					| CL_MEM_COPY_HOST_PTR,
+					Sizeof.cl_uint * vertexArray.length, vertexArrayPointer,
+					null);
 			memObject[1] = clCreateBuffer(context, CL_MEM_READ_ONLY
-					| CL_MEM_COPY_HOST_PTR, Sizeof.cl_int * edgeArray.length,
+					| CL_MEM_COPY_HOST_PTR, Sizeof.cl_uint * edgeCount,
 					edgeArrayPointer, null);
 			memObject[2] = clCreateBuffer(context, CL_MEM_READ_ONLY
-					| CL_MEM_COPY_HOST_PTR, Sizeof.cl_int * weightArray.length,
-					weightArrayPointer, null);
+					| CL_MEM_COPY_HOST_PTR,
+					Sizeof.cl_uint * weightArray.length, weightArrayPointer,
+					null);
+
 			memObject[3] = clCreateBuffer(context, CL_MEM_READ_WRITE,
-					Sizeof.cl_int * maskArray.length, null, null);
+					Sizeof.cl_uint * vertexCount, null, null);
 			memObject[4] = clCreateBuffer(context, CL_MEM_READ_WRITE,
-					Sizeof.cl_int * costArray.length, null, null);
+					Sizeof.cl_uint * vertexCount, null, null);
 			memObject[5] = clCreateBuffer(context, CL_MEM_READ_WRITE,
-					Sizeof.cl_int * costArray.length, null, null);
+					Sizeof.cl_uint * vertexCount, null, null);
 
 			intializationKernel = clCreateKernel(program,
 					KERNEL_INITIALIZATION, null);
@@ -142,11 +141,12 @@ public class Dijkstra {
 			clSetKernelArg(intializationKernel, 4, Sizeof.cl_uint,
 					Pointer.to(new int[] { vertexCount }));
 
-			final long globalWorkSize = vertexArray.length;
+			final long[] globalWorkSize = new long[] { vertexCount };
 			clEnqueueNDRangeKernel(queue, intializationKernel, 1, null,
-					new long[] { globalWorkSize }, DEFAULT_LOCAL_WORKSIZE, 0,
-					null, null);
+					globalWorkSize, DEFAULT_LOCAL_WORKSIZE, 0, null, null);
 
+			final int[] maskArray = new int[vertexCount];
+			final Pointer maskArrayPointer = Pointer.to(maskArray);
 			do {
 				// Enqueue Kernel SSSP 1
 				//
@@ -176,47 +176,35 @@ public class Dijkstra {
 						Pointer.to(new int[] { edgeCount }));
 				//
 				clEnqueueNDRangeKernel(queue, sssp1Kernel, 1, null,
-						new long[] { globalWorkSize }, DEFAULT_LOCAL_WORKSIZE,
-						0, null, null);
+						globalWorkSize, DEFAULT_LOCAL_WORKSIZE, 0, null, null);
 
 				// Enqueue Kernel SSSP 2
-				// __global int *vertexArray,
-				clSetKernelArg(sssp2Kernel, 0, Sizeof.cl_mem,
-						Pointer.to(memObject[0]));
-				// __global float *edgeArray,
-				clSetKernelArg(sssp2Kernel, 1, Sizeof.cl_mem,
-						Pointer.to(memObject[1]));
-				// __global float *weightArray,
-				clSetKernelArg(sssp2Kernel, 2, Sizeof.cl_mem,
-						Pointer.to(memObject[2]));
 				// __global int *maskArray,
-				clSetKernelArg(sssp2Kernel, 3, Sizeof.cl_mem,
+				clSetKernelArg(sssp2Kernel, 0, Sizeof.cl_mem,
 						Pointer.to(memObject[3]));
 				// __global float *costArray,
-				clSetKernelArg(sssp2Kernel, 4, Sizeof.cl_mem,
+				clSetKernelArg(sssp2Kernel, 1, Sizeof.cl_mem,
 						Pointer.to(memObject[4]));
-				// __global float *updatingCostArray,
-				clSetKernelArg(sssp2Kernel, 5, Sizeof.cl_mem,
+				// __global float *updatingCostArray
+				clSetKernelArg(sssp2Kernel, 2, Sizeof.cl_mem,
 						Pointer.to(memObject[5]));
-				// int vertexCount
-				clSetKernelArg(sssp2Kernel, 6, Sizeof.cl_uint,
-						Pointer.to(new int[] { vertexCount }));
-				//
+
 				clEnqueueNDRangeKernel(queue, sssp2Kernel, 1, null,
-						new long[] { globalWorkSize }, DEFAULT_LOCAL_WORKSIZE,
-						0, null, null);
+						globalWorkSize, DEFAULT_LOCAL_WORKSIZE, 0, null, null);
 
 				// read mask array
-				clEnqueueReadBuffer(queue, memObject[03], CL_TRUE, 0,
-						Sizeof.cl_int * maskArray.length, maskArrayPointer, 0,
+				clEnqueueReadBuffer(queue, memObject[3], CL_TRUE, 0,
+						Sizeof.cl_uint * vertexCount, maskArrayPointer, 0,
 						null, null);
 			} while (!isEmpty(maskArray));
 
 			// read cost array
-			clEnqueueReadBuffer(queue, memObject[03], CL_TRUE, 0, Sizeof.cl_int
-					* costArray.length, costArrayPointer, 0, null, null);
+			final int[] costArray = new int[vertexCount];
+			final Pointer costArrayPointer = Pointer.to(costArray);
+			clEnqueueReadBuffer(queue, memObject[4], CL_TRUE, 0, Sizeof.cl_uint
+					* vertexCount, costArrayPointer, 0, null, null);
 
-			System.out.println(Arrays.toString(costArray));
+			return costArray[targetVertexId];
 
 		} finally {
 			// release kernel, program, and memory objects
