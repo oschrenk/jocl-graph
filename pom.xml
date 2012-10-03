@@ -45,7 +45,7 @@
 		<version.jocl-commons>1.0-SNAPSHOT</version.jocl-commons>
 
 		<!-- EXTERNAL -->
-		<version.guava>13.0</version.guava>
+		<version.guava>13.0.1</version.guava>
 		<version.jocl>0.1.7</version.jocl>
 		<version.jocl-utils>1.0</version.jocl-utils>
 		<version.junit>4.10</version.junit>

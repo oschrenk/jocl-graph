@@ -8,6 +8,8 @@ import static org.jocl.CL.clReleaseContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.util.List;
+
 import org.jocl.CL;
 import org.jocl.cl_command_queue;
 import org.jocl.cl_context;
@@ -22,31 +24,24 @@ import org.jocl.utils.Programs;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
 public class DijkstraTest {
 
 	// vertices
-	private static final int A = 0;
-	private static final int B = 1;
-	private static final int C = 2;
-	private static final int D = 3;
-
-	/** The graph. */
-	private static Graph graph;
+	private static final int O = 0;
+	private static final int A = 1;
+	private static final int B = 2;
+	private static final int C = 3;
+	private static final int D = 4;
+	private static final int E = 5;
+	private static final int F = 6;
+	private static final int T = 7;
 
 	@BeforeClass
 	public static void setUp() {
 		// Enable exceptions and subsequently omit error checks in this sample
 		CL.setExceptionsEnabled(true);
-
-		graph = new Graph(4, 7);
-		graph.addEdge(A, B, 4);
-		graph.addEdge(A, C, 2);
-		graph.addEdge(B, C, 3);
-		graph.addEdge(B, D, 1);
-		graph.addEdge(C, A, 2);
-		graph.addEdge(C, B, 1);
-		graph.addEdge(C, D, 5);
-		graph.addVertex(D);
 	}
 
 	@Test
@@ -71,6 +66,16 @@ public class DijkstraTest {
 	@Test
 	public void testRun() {
 
+		Graph graph = new Graph(4, 7);
+		graph.addEdge(A, B, 4);
+		graph.addEdge(A, C, 2);
+		graph.addEdge(B, C, 3);
+		graph.addEdge(B, D, 1);
+		graph.addEdge(C, A, 2);
+		graph.addEdge(C, B, 1);
+		graph.addEdge(C, D, 5);
+		graph.addVertex(D);
+
 		final cl_platform_id platformId = Platforms.getPlatforms().get(0);
 		final cl_device_id deviceId = Devices.getDevices(platformId,
 				CL_DEVICE_TYPE_GPU).get(0);
@@ -81,10 +86,66 @@ public class DijkstraTest {
 			final int sourceVertexId = A;
 			final int targetVertexId = D;
 			final int expectedLowestCost = 4;
-			final int actualLowestCost = dijkstra.run(context, queue,
-					sourceVertexId, targetVertexId);
+
+			dijkstra.run(context, queue, sourceVertexId, targetVertexId);
+
+			final int actualLowestCost = dijkstra.getCost();
 
 			assertEquals(expectedLowestCost, actualLowestCost);
+
+		} finally {
+			clReleaseCommandQueue(queue);
+			clReleaseContext(context);
+		}
+
+	}
+
+	/**
+	 * Example from
+	 * http://optlab-server.sce.carleton.ca/POAnimations2007/DijkstrasAlgo.html
+	 */
+	@Test
+	public void testAnotherGraph() {
+		Graph graph = new Graph(8, 13);
+		graph.addEdge(O, A, 2);
+		graph.addEdge(O, B, 5);
+		graph.addEdge(O, C, 4);
+
+		graph.addEdge(A, B, 2);
+		graph.addEdge(A, F, 12);
+
+		graph.addEdge(B, C, 1);
+		graph.addEdge(B, D, 4);
+		graph.addEdge(B, E, 3);
+		graph.addEdge(C, E, 4);
+
+		graph.addEdge(D, E, 1);
+		graph.addEdge(D, T, 5);
+
+		graph.addEdge(E, T, 7);
+
+		graph.addEdge(F, T, 3);
+
+		final cl_platform_id platformId = Platforms.getPlatforms().get(0);
+		final cl_device_id deviceId = Devices.getDevices(platformId,
+				CL_DEVICE_TYPE_GPU).get(0);
+		final cl_context context = Contexts.create(platformId, deviceId);
+		final cl_command_queue queue = CommandQueues.create(context, deviceId);
+		try {
+			final Dijkstra dijkstra = new Dijkstra(graph);
+			final int sourceVertexId = O;
+			final int targetVertexId = T;
+			final int expectedLowestCost = 13;
+			final List<Integer> expectedPath = Lists
+					.newArrayList(O, A, B, D, T);
+
+			dijkstra.run(context, queue, sourceVertexId, targetVertexId);
+
+			final int actualLowestCost = dijkstra.getCost();
+			final List<Integer> actualPath = dijkstra.getPath();
+
+			assertEquals(expectedLowestCost, actualLowestCost);
+			assertEquals(expectedPath, actualPath);
 
 		} finally {
 			clReleaseCommandQueue(queue);
