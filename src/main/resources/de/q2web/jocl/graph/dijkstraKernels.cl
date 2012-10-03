@@ -30,6 +30,10 @@
  *
  * @author Dan Ginsburg <daniel.ginsburg@childrens.harvard.edu>
  *
+ * Modified to compute the path and not only the costs
+ *
+ * @author Oliver Schrenk <oliver.schrenk@gmail.com>
+ *
  * @param vertexArray
  *			each entry contains an index that points to <code>edgeArray</code>.
  *			The entry is the edge for that vertex.
@@ -40,6 +44,8 @@
  * @param maskArray
  * @param costArray
  * @param updatingCostArray
+ * @param parentVertexArray
+ 			Stores the parent
  * @param vertexCount
  * @param edgeCount
  */

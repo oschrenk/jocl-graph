@@ -1,8 +1,13 @@
 package de.q2web.jocl.graph;
 
+import java.util.LinkedList;
+import java.util.List;
+
+import com.google.common.primitives.Ints;
+
 /**
  * The Class Graph.
- *
+ * 
  * @author Oliver Schrenk <oliver.schrenk@q2web.de>
  */
 public class Graph {
@@ -17,13 +22,13 @@ public class Graph {
 	final int[] vertexArray;
 
 	/** The edge array. */
-	final int[] edgeArray;
+	final List<Integer> edgeList;
 
 	/** The weight array. */
-	final int[] weightArray;
+	final List<Integer> weightList;
 
 	/** The edge sum. */
-	int edgeSum;
+	int edgeCount;
 
 	/** The last vertex id. */
 	int lastVertexId;
@@ -31,32 +36,28 @@ public class Graph {
 	/** The number of vertices. */
 	private final int numberOfVertices;
 
-	/** The number of edges. */
-	private final int numberOfEdges;
-
 	/**
 	 * Instantiates a new graph.
-	 *
+	 * 
 	 * @param numberOfVertices
 	 *            the number of vertices
 	 * @param numberOfEdges
 	 *            the number of edges
 	 */
-	public Graph(final int numberOfVertices, final int numberOfEdges) {
+	public Graph(final int numberOfVertices) {
 		this.numberOfVertices = numberOfVertices;
-		this.numberOfEdges = numberOfEdges;
 
 		vertexArray = new int[numberOfVertices];
-		edgeArray = new int[numberOfEdges];
-		weightArray = new int[numberOfEdges];
+		edgeList = new LinkedList<Integer>();
+		weightList = new LinkedList<Integer>();
 
-		edgeSum = ZERO_SUM;
+		edgeCount = ZERO_SUM;
 		lastVertexId = -NO_VERTEX;
 	}
 
 	/**
 	 * Adds the edge.
-	 *
+	 * 
 	 * @param from
 	 *            the from
 	 * @param to
@@ -67,26 +68,16 @@ public class Graph {
 	public void addEdge(final int from, final int to, final int weight) {
 		if (from != lastVertexId) {
 			lastVertexId = from;
-			vertexArray[from] = edgeSum;
+			vertexArray[from] = edgeCount;
 		}
-		edgeArray[edgeSum] = to;
-		weightArray[edgeSum] = weight;
-		edgeSum++;
-	}
-
-	/**
-	 * Adds the vertex.
-	 *
-	 * @param vertex
-	 *            the vertex
-	 */
-	public void addVertex(final int vertex) {
-		vertexArray[vertex] = edgeSum;
+		edgeList.add(to);
+		weightList.add(weight);
+		edgeCount++;
 	}
 
 	/**
 	 * Gets the vertex array.
-	 *
+	 * 
 	 * @return the vertexArray
 	 */
 	protected int[] getVertexArray() {
@@ -95,25 +86,25 @@ public class Graph {
 
 	/**
 	 * Gets the edge array.
-	 *
+	 * 
 	 * @return the edgeArray
 	 */
 	protected int[] getEdgeArray() {
-		return edgeArray;
+		return Ints.toArray(edgeList);
 	}
 
 	/**
 	 * Gets the weight array.
-	 *
+	 * 
 	 * @return the weightArray
 	 */
 	protected int[] getWeightArray() {
-		return weightArray;
+		return Ints.toArray(weightList);
 	}
 
 	/**
 	 * Gets the number of vertices.
-	 *
+	 * 
 	 * @return the number of vertices
 	 */
 	protected int getVertexCount() {
@@ -122,11 +113,11 @@ public class Graph {
 
 	/**
 	 * Gets the number of edges.
-	 *
+	 * 
 	 * @return the number of edges
 	 */
 	protected int getEdgeCount() {
-		return numberOfEdges;
+		return edgeList.size();
 	}
 
 }

@@ -64,17 +64,22 @@ public class DijkstraTest {
 	}
 
 	@Test
-	public void testRun() {
+	public void testVerySimple() {
 
-		Graph graph = new Graph(4, 7);
-		graph.addEdge(A, B, 4);
-		graph.addEdge(A, C, 2);
-		graph.addEdge(B, C, 3);
-		graph.addEdge(B, D, 1);
-		graph.addEdge(C, A, 2);
-		graph.addEdge(C, B, 1);
-		graph.addEdge(C, D, 5);
-		graph.addVertex(D);
+		Graph graph = new Graph(T + 1);
+		graph.addEdge(O, A, 1);
+		graph.addEdge(O, T, 1);
+		graph.addEdge(A, B, 1);
+		graph.addEdge(B, C, 1);
+		graph.addEdge(C, D, 1);
+		graph.addEdge(D, E, 1);
+		graph.addEdge(E, F, 1);
+		graph.addEdge(F, T, 1);
+		// is allowed because D is the target, so we don't have cycles
+		graph.addEdge(T, 0, 666);
+
+		// int[] vertexArray = graph.getVertexArray();
+		// int[] edgeArray = graph.getEdgeArray();
 
 		final cl_platform_id platformId = Platforms.getPlatforms().get(0);
 		final cl_device_id deviceId = Devices.getDevices(platformId,
@@ -83,8 +88,46 @@ public class DijkstraTest {
 		final cl_command_queue queue = CommandQueues.create(context, deviceId);
 		try {
 			final Dijkstra dijkstra = new Dijkstra(graph);
-			final int sourceVertexId = A;
-			final int targetVertexId = D;
+			final int sourceVertexId = O;
+			final int targetVertexId = T;
+			final int expectedLowestCost = 1;
+
+			dijkstra.run(context, queue, sourceVertexId, targetVertexId);
+
+			final int actualLowestCost = dijkstra.getCost();
+
+			assertEquals(expectedLowestCost, actualLowestCost);
+
+		} finally {
+			clReleaseCommandQueue(queue);
+			clReleaseContext(context);
+		}
+
+	}
+
+	@Test
+	public void testRun() {
+
+		Graph graph = new Graph(4);
+		graph.addEdge(O, A, 4);
+		graph.addEdge(O, B, 2);
+		graph.addEdge(A, B, 3);
+		graph.addEdge(A, C, 1);
+		graph.addEdge(B, O, 2);
+		graph.addEdge(B, A, 1);
+		graph.addEdge(B, C, 5);
+		// is allowed because D is the target, so we don't have cycles
+		graph.addEdge(C, O, 666);
+
+		final cl_platform_id platformId = Platforms.getPlatforms().get(0);
+		final cl_device_id deviceId = Devices.getDevices(platformId,
+				CL_DEVICE_TYPE_GPU).get(0);
+		final cl_context context = Contexts.create(platformId, deviceId);
+		final cl_command_queue queue = CommandQueues.create(context, deviceId);
+		try {
+			final Dijkstra dijkstra = new Dijkstra(graph);
+			final int sourceVertexId = O;
+			final int targetVertexId = C;
 			final int expectedLowestCost = 4;
 
 			dijkstra.run(context, queue, sourceVertexId, targetVertexId);
@@ -106,7 +149,7 @@ public class DijkstraTest {
 	 */
 	@Test
 	public void testAnotherGraph() {
-		Graph graph = new Graph(8, 13);
+		Graph graph = new Graph(8);
 		graph.addEdge(O, A, 2);
 		graph.addEdge(O, B, 5);
 		graph.addEdge(O, C, 4);
@@ -125,6 +168,9 @@ public class DijkstraTest {
 		graph.addEdge(E, T, 7);
 
 		graph.addEdge(F, T, 3);
+
+		// is allowed because D is the target, so we don't have cycles
+		graph.addEdge(T, 0, 666);
 
 		final cl_platform_id platformId = Platforms.getPlatforms().get(0);
 		final cl_device_id deviceId = Devices.getDevices(platformId,
